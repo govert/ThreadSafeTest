@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
+    <!-- Prevent Excel-DNA from overwriting custom debug settings -->
+    <RunExcelDnaSetDebuggerOptions>false</RunExcelDnaSetDebuggerOptions>
     <!-- Enables creating 32bit add-in. -->
     <!-- Default value: true -->
     <ExcelDnaCreate32BitAddIn>false</ExcelDnaCreate32BitAddIn>

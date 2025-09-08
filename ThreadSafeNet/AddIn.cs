@@ -6,14 +6,6 @@ namespace ThreadSafeNet
 {
     public static class AddIn
     {
-        [ExcelFunction(Description = "Calculates a value with thread safety demonstration")]
-        public static double ThreadSafeNetFunction(double input)
-        {
-            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            var result = Math.Sqrt(input * 2) + threadId;
-            return result;
-        }
-
         [ExcelFunction(Description = "C# version of ThreadSafeCFunction - calculates sqrt(input*3) + thread ID", IsThreadSafe = true)]
         public static double csThreadSafeCFunction(double input)
         {

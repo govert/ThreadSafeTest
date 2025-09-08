@@ -20,10 +20,10 @@
 #define rgFuncsRows 5
 
 static const LPWSTR rgFuncs[rgFuncsRows][7] = {
-    {(LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"QQ", (LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"input", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Original function - not thread safe"},
+    {(LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"QQ$", (LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"input", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Thread-safe version using manual allocation"},
     {(LPWSTR)L"ThreadSafeCalc", (LPWSTR)L"BB$", (LPWSTR)L"ThreadSafeCalc", (LPWSTR)L"number", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Thread-safe calculation with $ flag"},
     {(LPWSTR)L"ThreadSafeXLOPER", (LPWSTR)L"QQ$", (LPWSTR)L"ThreadSafeXLOPER", (LPWSTR)L"input", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Thread-safe XLOPER12 function"},
-    {(LPWSTR)L"AllocatedMemoryFunction", (LPWSTR)L"QQ", (LPWSTR)L"AllocatedMemoryFunction", (LPWSTR)L"size", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Returns allocated memory requiring xlFree"},
+    {(LPWSTR)L"AllocatedMemoryFunction", (LPWSTR)L"QQ$", (LPWSTR)L"AllocatedMemoryFunction", (LPWSTR)L"size", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Returns allocated memory requiring xlFree"},
     {(LPWSTR)L"ThreadInfoFunction", (LPWSTR)L"Q$", (LPWSTR)L"ThreadInfoFunction", (LPWSTR)L"", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Returns thread info - thread safe"}
 };
 
@@ -32,12 +32,13 @@ static const LPWSTR rgFuncs[rgFuncsRows][7] = {
 **
 ** Calculates sqrt(input*3) + thread ID to demonstrate thread safety
 ** Takes XLOPER12 input and returns XLOPER12 result
-** NOT THREAD SAFE - uses framework functions
+** Thread-safe implementation using manual allocation
 */
 __declspec(dllexport) LPXLOPER12 WINAPI ThreadSafeCFunction(LPXLOPER12 input)
 {
     double inputValue = 0.0;
     DWORD threadId = GetCurrentThreadId();
+    LPXLOPER12 result;
     
     // Extract double value from XLOPER12
     if (input && input->xltype == xltypeNum)
@@ -50,10 +51,16 @@ __declspec(dllexport) LPXLOPER12 WINAPI ThreadSafeCFunction(LPXLOPER12 input)
     }
     
     // Calculate result
-    double result = sqrt(inputValue * 3.0) + (double)threadId;
-    
-    // Return result as XLOPER12 using framework function
-    return TempNum12(result);
+    double value = sqrt(inputValue * 3.0) + (double)threadId;
+
+    // Allocate XLOPER12 result manually (thread-safe) and mark for Excel to free
+    result = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+    if (result)
+    {
+        result->xltype = xltypeNum | xlbitDLLFree;
+        result->val.num = value;
+    }
+    return result;
 }
 
 /*

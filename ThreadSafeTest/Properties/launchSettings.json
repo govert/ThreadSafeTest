@@ -1,9 +1,16 @@
 {
   "profiles": {
-    "Excel": {
+    "Excel Debug": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
-      "commandLineArgs": "/x \"ThreadSafeTest-AddIn64.xll\""
+      "workingDirectory": "..\\Output\\Debug",
+      "commandLineArgs": "/x \"ThreadSafeTest.xll\""
+    },
+    "Excel Release": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
+      "workingDirectory": "..\\Output\\Release",
+      "commandLineArgs": "/x \"ThreadSafeTest.xll\""
     }
   }
 }

@@ -47,8 +47,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.xll</TargetExt>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LocalDebuggerCommand>$(PROGRAMFILES)\Microsoft Office\root\Office16\EXCEL.EXE</LocalDebuggerCommand>
     <LocalDebuggerCommandArguments>"$(TargetPath)"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
@@ -56,8 +56,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.xll</TargetExt>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -75,6 +75,7 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>SDK\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>XLCALL32.LIB;frmwrk32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <TargetMachine>MachineX64</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -97,14 +98,11 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>SDK\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>XLCALL32.LIB;frmwrk32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <TargetMachine>MachineX64</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="SDK\include\XLCALL.H" />
-    <ClInclude Include="SDK\include\FRAMEWRK.H" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="ThreadSafeC.cpp" />
+    <ClCompile Include="ThreadSafeC.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ThreadSafeC.def" />
@@ -113,6 +111,10 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Target Name="PostBuild" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SolutionDir)Output\$(Configuration)" Condition="'$(Platform)'=='x64'" SkipUnchangedFiles="true" />
+    <PropertyGroup>
+      <OutputDir Condition="'$(SolutionDir)' != ''">$(SolutionDir)Output\$(Configuration)</OutputDir>
+      <OutputDir Condition="'$(SolutionDir)' == ''">..\Output\$(Configuration)</OutputDir>
+    </PropertyGroup>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutputDir)" Condition="'$(Platform)'=='x64'" SkipUnchangedFiles="false" />
   </Target>
 </Project>
