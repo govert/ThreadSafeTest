@@ -20,6 +20,7 @@ Ensure both add-ins are alongside `ThreadSafeTest.xll` in the Output folder so t
 - .NET caller→inner: `=csDoubleCaller(2, 3)` → `5`
 - C inner: `=cDoubleInner(2, 3)` → `5`
 - C caller→inner: `=cDoubleCaller(2, 3)` → `5`
+- C caller (no Temp helpers, per-thread args): `=cDoubleCallerTLS(2, 3)` → `5`
 
 ## Doubles inside XLOPERs (C only)
 - C inner: `=cXDoubleInner(2, 3)` → `5`
@@ -53,4 +54,3 @@ Ensure both add-ins are alongside `ThreadSafeTest.xll` in the Output folder so t
 ## Notes
 - All functions marked as thread-safe (`$` in C registration; `IsThreadSafe=true` in .NET attributes).
 - For cross add-in calls, ensure both XLLs are present in the same directory and loaded.
-

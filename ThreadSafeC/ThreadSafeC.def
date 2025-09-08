@@ -9,6 +9,7 @@ cNestedThreadInfo
 cNestedThreadInfoEx
 cDoubleInner
 cDoubleCaller
+cDoubleCallerTLS
 cXDoubleInner
 cXDoubleCaller
 cXStringInner

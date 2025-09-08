@@ -7,8 +7,24 @@
 #include <windows.h>
 #include <math.h>
 #include <stdio.h>
+#include <wchar.h>
 #include <xlcall.h>
 #include <framewrk.h>
+#include <stdarg.h>
+
+// Debug output helper: writes formatted wide string to debugger output
+static void DebugPrintW(const wchar_t* fmt, ...)
+{
+    wchar_t buffer[512];
+    va_list args;
+    va_start(args, fmt);
+    _vsnwprintf_s(buffer, _countof(buffer), _TRUNCATE, fmt, args);
+    va_end(args);
+    OutputDebugStringW(buffer);
+}
+
+// Global register id captured for cDoubleInner (returned by xlfRegister)
+static XLOPER12 g_reg_cDoubleInner = { 0 };
 
 /*
 ** rgFuncs
@@ -17,7 +33,7 @@
 ** These functions are registered in xlAutoOpen when the XLL loads.
 ** Format matches the last 7 arguments to REGISTER function.
 */
-#define rgFuncsRows 14
+#define rgFuncsRows 15
 
 static const LPWSTR rgFuncs[rgFuncsRows][7] = {
     {(LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"QQ$", (LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"input", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Thread-safe version using manual allocation"},
@@ -36,7 +52,9 @@ static const LPWSTR rgFuncs[rgFuncsRows][7] = {
     {(LPWSTR)L"cXDoubleCaller", (LPWSTR)L"QQQ$", (LPWSTR)L"cXDoubleCaller", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cXDoubleInner via XlCall (XLOPER)"},
     // Strings inside XLOPER12
     {(LPWSTR)L"cXStringInner", (LPWSTR)L"QQ$", (LPWSTR)L"cXStringInner", (LPWSTR)L"text", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Inner string echo (XLOPER)"},
-    {(LPWSTR)L"cXStringCaller", (LPWSTR)L"QQ$", (LPWSTR)L"cXStringCaller", (LPWSTR)L"text", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cXStringInner via XlCall (XLOPER)"}
+    {(LPWSTR)L"cXStringCaller", (LPWSTR)L"QQ$", (LPWSTR)L"cXStringCaller", (LPWSTR)L"text", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cXStringInner via XlCall (XLOPER)"},
+    // Doubles no-Temp helpers (per-thread allocated args)
+    {(LPWSTR)L"cDoubleCallerTLS", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerTLS", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cDoubleInner via per-thread XLOPERs (no Temp)"}
 };
 
 /*
@@ -512,6 +530,88 @@ __declspec(dllexport) LPXLOPER12 WINAPI cXStringCaller(LPXLOPER12 s)
 }
 
 /*
+** cDoubleCallerTLS
+** Calls cDoubleInner via xlUDF using per-thread allocated XLOPER12 arguments (no Temp helpers)
+** Memory is allocated once per thread and never reclaimed during process lifetime
+*/
+__declspec(dllexport) double WINAPI cDoubleCallerTLS(double x, double y)
+{
+    static __declspec(thread) int tls_init = 0;
+    static __declspec(thread) LPXLOPER12 tls_fn = NULL;
+    static __declspec(thread) LPWSTR     tls_fn_str = NULL;
+    static __declspec(thread) LPXLOPER12 tls_x = NULL;
+    static __declspec(thread) LPXLOPER12 tls_y = NULL;
+
+    if (!tls_init)
+    {
+		// Debug print the thread ID and initialization
+		DWORD threadId = GetCurrentThreadId();
+        DebugPrintW(L"Thread %lu: Initializing TLS XLOPERs\n", threadId);
+
+        // Allocate numeric argument XLOPER12s (per-thread)
+        tls_x = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+        tls_y = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+
+        if (tls_x)
+        {
+            tls_x->xltype = xltypeNum;
+            tls_x->val.num = 0.0;
+        }
+        if (tls_y)
+        {
+            tls_y->xltype = xltypeNum;
+            tls_y->val.num = 0.0;
+        }
+        tls_init = 1;
+    }
+
+    // Debug print the thread ID and current x,y values
+    DWORD threadId = GetCurrentThreadId();
+    DebugPrintW(L"Thread %lu: Calling cDoubleInner with x=%f, y=%f\n", threadId, x, y);
+
+    if (tls_x) tls_x->val.num = x; 
+    if (tls_y) tls_y->val.num = y;
+
+    XLOPER12 ret;
+    LPXLOPER12 fnArg = NULL;
+    if ((g_reg_cDoubleInner.xltype & xltypeNum) == xltypeNum)
+    {
+        fnArg = (LPXLOPER12)&g_reg_cDoubleInner;
+    }
+    else
+    {
+        // Fallback to per-thread function name XLOPER if register id is not available
+		DebugPrintW(L"Thread %lu: Using TLS function name for cDoubleInner\n", threadId);
+        if (!tls_fn)
+        {
+            tls_fn = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+            tls_fn_str = (LPWSTR)GlobalAlloc(GMEM_FIXED, 32 * sizeof(wchar_t));
+            if (tls_fn && tls_fn_str)
+            {
+                const wchar_t* name = L"cDoubleInner";
+                size_t nlen = wcslen(name);
+                if (nlen > 30) nlen = 30;
+                tls_fn_str[0] = (wchar_t)nlen;
+                wcsncpy_s(&tls_fn_str[1], 31, name, nlen);
+                tls_fn->xltype = xltypeStr;
+                tls_fn->val.str = tls_fn_str;
+            }
+        }
+        fnArg = tls_fn;
+    }
+
+    int rc = Excel12f(xlUDF, &ret, 3, fnArg, tls_x, tls_y);
+
+    // Debug print the thread IDm rc value and the address of the result, then in the next line the result value
+	DebugPrintW(L"Thread %lu: Excel12f returned rc = %d, ret addr = %p\n", threadId, rc, (rc == xlretSuccess) ? (void*)&ret : NULL);
+
+    if (rc == xlretSuccess && (ret.xltype & xltypeNum) == xltypeNum)
+    	DebugPrintW(L"Thread %lu: cDoubleInner result = %f\n", threadId, (rc == xlretSuccess && (ret.xltype & xltypeNum) == xltypeNum) ? ret.val.num : 0.0);
+        return ret.val.num;
+    return 0.0;
+}
+
+/*
 ** xlAutoOpen
 **
 ** Called by Excel when the XLL is loaded. Registers all functions
@@ -525,10 +625,11 @@ __declspec(dllexport) int WINAPI xlAutoOpen(void)
     // Get the name of this XLL
     Excel12f(xlGetName, &xDLL, 0);
 
-    // Register all functions in the rgFuncs table
+    // Register all functions in the rgFuncs table (capture reg id for cDoubleInner)
     for (i = 0; i < rgFuncsRows; i++) 
     {
-        Excel12f(xlfRegister, 0, 1 + 7,
+        XLOPER12 regId;
+        Excel12f(xlfRegister, &regId, 1 + 7,
             (LPXLOPER12)&xDLL,
             TempStr12(rgFuncs[i][0]),   // Function name
             TempStr12(rgFuncs[i][1]),   // Type signature
@@ -541,6 +642,23 @@ __declspec(dllexport) int WINAPI xlAutoOpen(void)
             TempStr12(rgFuncs[i][6]),   // Function help
             TempStr12(rgFuncs[i][3])    // Argument help
         );
+        if (rgFuncs[i][0] && wcscmp(rgFuncs[i][0], L"cDoubleInner") == 0 && (regId.xltype & xltypeNum) == xltypeNum)
+        {
+            // Store register id from xlfRegister
+            g_reg_cDoubleInner = regId;
+
+            // Confirm the same id is returned by xlfEvaluate on the function name
+            XLOPER12 evalId;
+            int evrc = Excel12f(xlfEvaluate, &evalId, 1, TempStr12(L"cDoubleInner"));
+            if (evrc == xlretSuccess && (evalId.xltype & xltypeNum) == xltypeNum)
+            {
+                DebugPrintW(L"REGISTER vs EVALUATE id: %.0f vs %.0f\n", g_reg_cDoubleInner.val.num, evalId.val.num);
+            }
+            else
+            {
+                DebugPrintW(L"EVALUATE on name failed: rc=%d, type=0x%x\n", evrc, evalId.xltype);
+            }
+        }
     }
 
     // Free temporary memory used by framework

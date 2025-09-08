@@ -50,7 +50,8 @@
     <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LocalDebuggerCommand>$(PROGRAMFILES)\Microsoft Office\root\Office16\EXCEL.EXE</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>"$(TargetPath)"</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>$(SolutionDir)Output\$(Configuration)</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>/x "ThreadSafeC.xll"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -58,6 +59,10 @@
     <TargetExt>.xll</TargetExt>
     <OutDir>$(ProjectDir)bin\$(Configuration)\$(Platform)\</OutDir>
     <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
+    <LocalDebuggerCommand>$(PROGRAMFILES)\Microsoft Office\root\Office16\EXCEL.EXE</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>$(SolutionDir)Output\$(Configuration)</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>/x "ThreadSafeC.xll"</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
