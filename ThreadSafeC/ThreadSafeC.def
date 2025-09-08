@@ -1,5 +1,9 @@
 EXPORTS
 ThreadSafeCFunction
+ThreadSafeCalc
+ThreadSafeXLOPER
+AllocatedMemoryFunction
+ThreadInfoFunction
 xlAutoOpen
 xlAutoClose
 xlAutoFree12

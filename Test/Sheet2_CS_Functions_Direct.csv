@@ -1,0 +1,21 @@
+Test Description,Function,Input Value,Formula,Thread Info,Notes
+Basic csThreadSafeCFunction,csThreadSafeCFunction,10,=csThreadSafeCFunction(C2),=csThreadInfoFunction(),C# version of ThreadSafeCFunction
+Basic csThreadSafeCalc,csThreadSafeCalc,25,=csThreadSafeCalc(C3),,C# version with managed thread ID
+csThreadSafeXLOPER Test,csThreadSafeXLOPER,15,=csThreadSafeXLOPER(C4),,Returns double directly
+C# Small Array (3 elements),csAllocatedMemoryFunction,3,=csAllocatedMemoryFunction(C5),,C# managed array
+C# Large Array (15 elements),csAllocatedMemoryFunction,15,=csAllocatedMemoryFunction(C6),,Larger C# array test
+C# Thread Information,csThreadInfoFunction,N/A,=csThreadInfoFunction(),,Managed thread info
+Advanced C# Calculation,csAdvancedTest,10,=csAdvancedTest(C7; 5),,Advanced calculation with 5 iterations
+C# Negative Input Test,csThreadSafeCalc,-10,=csThreadSafeCalc(C9),,Test C# with negative input
+C# Zero Input Test,csThreadSafeCalc,0,=csThreadSafeCalc(C10),,Test C# with zero input
+C# Stress Test 1,csThreadSafeCalc,60,=csThreadSafeCalc(C11),,Managed thread performance
+C# Stress Test 2,csThreadSafeCalc,61,=csThreadSafeCalc(C12),,Managed thread performance
+C# Stress Test 3,csThreadSafeCalc,62,=csThreadSafeCalc(C13),,Managed thread performance
+C# Stress Test 4,csThreadSafeCalc,63,=csThreadSafeCalc(C14),,Managed thread performance
+C# Stress Test 5,csThreadSafeCalc,64,=csThreadSafeCalc(C15),,Managed thread performance
+C# Stress Test 6,csThreadSafeCalc,65,=csThreadSafeCalc(C16),,Managed thread performance
+C# Stress Test 7,csThreadSafeCalc,66,=csThreadSafeCalc(C17),,Managed thread performance
+C# Stress Test 8,csThreadSafeCalc,67,=csThreadSafeCalc(C18),,Managed thread performance
+C# Stress Test 9,csThreadSafeCalc,68,=csThreadSafeCalc(C19),,Managed thread performance
+C# Stress Test 10,csThreadSafeCalc,69,=csThreadSafeCalc(C20),,Managed thread performance
+C# Large Input Test,csThreadSafeCalc,10000,=csThreadSafeCalc(C21),,Test C# with large input value

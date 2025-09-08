@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <!-- Enables creating 32bit add-in. -->
+    <!-- Default value: true -->
+    <ExcelDnaCreate32BitAddIn>false</ExcelDnaCreate32BitAddIn>
+    <!-- Enables creating 64bit add-in. -->
+    <!-- Default value: true -->
+    <ExcelDnaCreate64BitAddIn>true</ExcelDnaCreate64BitAddIn>
+    <!-- Explicit 64bit output file name -->
+    <!-- Default value: empty -->
+    <ExcelDnaPack64BitXllName>ThreadSafeTest</ExcelDnaPack64BitXllName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExcelDna.AddIn" Version="1.8.0" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <PropertyGroup>
+      <OutputDir Condition="'$(SolutionDir)' != ''">$(SolutionDir)Output\$(Configuration)</OutputDir>
+      <OutputDir Condition="'$(SolutionDir)' == ''">..\..\Output\$(Configuration)</OutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <XllFiles Include="$(OutputPath)**\ThreadSafeTest.xll" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutputDir)" Condition="!Exists('$(OutputDir)')" />
+    <Copy SourceFiles="@(XllFiles)" DestinationFolder="$(OutputDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

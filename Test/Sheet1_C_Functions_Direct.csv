@@ -1,0 +1,20 @@
+Test Description,Function,Input Value,Formula,Thread Info,Notes
+Basic ThreadSafeCFunction,ThreadSafeCFunction,10,=ThreadSafeCFunction(C2),=ThreadInfoFunction(),Tests basic C function
+Basic ThreadSafeCalc,ThreadSafeCalc,25,=ThreadSafeCalc(C3),,Thread-safe calculation with $ flag
+ThreadSafeXLOPER Test,ThreadSafeXLOPER,15,=ThreadSafeXLOPER(C4),,Thread-safe XLOPER12 function
+Small Array (3 elements),AllocatedMemoryFunction,3,=AllocatedMemoryFunction(C5),,Memory allocated by C with xlFree
+Large Array (20 elements),AllocatedMemoryFunction,20,=AllocatedMemoryFunction(C6),,Larger memory allocation test
+Thread Information,ThreadInfoFunction,N/A,=ThreadInfoFunction(),,Native thread information
+Negative Input Test,ThreadSafeCalc,-10,=ThreadSafeCalc(C8),,Test with negative input
+Zero Input Test,ThreadSafeCalc,0,=ThreadSafeCalc(C9),,Test with zero input
+Stress Test 1,ThreadSafeCalc,50,=ThreadSafeCalc(C10),,Concurrent execution test
+Stress Test 2,ThreadSafeCalc,51,=ThreadSafeCalc(C11),,Concurrent execution test
+Stress Test 3,ThreadSafeCalc,52,=ThreadSafeCalc(C12),,Concurrent execution test
+Stress Test 4,ThreadSafeCalc,53,=ThreadSafeCalc(C13),,Concurrent execution test
+Stress Test 5,ThreadSafeCalc,54,=ThreadSafeCalc(C14),,Concurrent execution test
+Stress Test 6,ThreadSafeCalc,55,=ThreadSafeCalc(C15),,Concurrent execution test
+Stress Test 7,ThreadSafeCalc,56,=ThreadSafeCalc(C16),,Concurrent execution test
+Stress Test 8,ThreadSafeCalc,57,=ThreadSafeCalc(C17),,Concurrent execution test
+Stress Test 9,ThreadSafeCalc,58,=ThreadSafeCalc(C18),,Concurrent execution test
+Stress Test 10,ThreadSafeCalc,59,=ThreadSafeCalc(C19),,Concurrent execution test
+Large Input Test,ThreadSafeCalc,10000,=ThreadSafeCalc(C20),,Test with large input value
