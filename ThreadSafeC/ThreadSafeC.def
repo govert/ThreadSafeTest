@@ -7,6 +7,12 @@ ThreadInfoFunction
 cInnerThreadInfo
 cNestedThreadInfo
 cNestedThreadInfoEx
+cDoubleInner
+cDoubleCaller
+cXDoubleInner
+cXDoubleCaller
+cXStringInner
+cXStringCaller
 xlAutoOpen
 xlAutoClose
 xlAutoFree12

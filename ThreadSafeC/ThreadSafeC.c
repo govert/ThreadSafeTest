@@ -17,7 +17,7 @@
 ** These functions are registered in xlAutoOpen when the XLL loads.
 ** Format matches the last 7 arguments to REGISTER function.
 */
-#define rgFuncsRows 8
+#define rgFuncsRows 14
 
 static const LPWSTR rgFuncs[rgFuncsRows][7] = {
     {(LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"QQ$", (LPWSTR)L"ThreadSafeCFunction", (LPWSTR)L"input", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Thread-safe version using manual allocation"},
@@ -27,7 +27,16 @@ static const LPWSTR rgFuncs[rgFuncsRows][7] = {
     {(LPWSTR)L"ThreadInfoFunction", (LPWSTR)L"Q$", (LPWSTR)L"ThreadInfoFunction", (LPWSTR)L"", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Returns thread info - thread safe"},
     {(LPWSTR)L"cInnerThreadInfo", (LPWSTR)L"Q$", (LPWSTR)L"cInnerThreadInfo", (LPWSTR)L"", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Inner thread info for nested call"},
     {(LPWSTR)L"cNestedThreadInfo", (LPWSTR)L"Q$", (LPWSTR)L"cNestedThreadInfo", (LPWSTR)L"", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Outer+Inner thread info via XlCall"},
-    {(LPWSTR)L"cNestedThreadInfoEx", (LPWSTR)L"QB$", (LPWSTR)L"cNestedThreadInfoEx", (LPWSTR)L"external", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Outer+Inner thread info, choose external C# call"}
+    {(LPWSTR)L"cNestedThreadInfoEx", (LPWSTR)L"QB$", (LPWSTR)L"cNestedThreadInfoEx", (LPWSTR)L"external", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Outer+Inner thread info, choose external C# call"},
+    // Doubles as parameters (no XLOPERs)
+    {(LPWSTR)L"cDoubleInner", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleInner", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Inner double add (no XLOPER)"},
+    {(LPWSTR)L"cDoubleCaller", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCaller", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cDoubleInner via XlCall (no XLOPER)"},
+    // Doubles wrapped inside XLOPER12
+    {(LPWSTR)L"cXDoubleInner", (LPWSTR)L"QQQ$", (LPWSTR)L"cXDoubleInner", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Inner double add (XLOPER)"},
+    {(LPWSTR)L"cXDoubleCaller", (LPWSTR)L"QQQ$", (LPWSTR)L"cXDoubleCaller", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cXDoubleInner via XlCall (XLOPER)"},
+    // Strings inside XLOPER12
+    {(LPWSTR)L"cXStringInner", (LPWSTR)L"QQ$", (LPWSTR)L"cXStringInner", (LPWSTR)L"text", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Inner string echo (XLOPER)"},
+    {(LPWSTR)L"cXStringCaller", (LPWSTR)L"QQ$", (LPWSTR)L"cXStringCaller", (LPWSTR)L"text", (LPWSTR)L"1", (LPWSTR)L"Thread Safe Demo", (LPWSTR)L"Calls cXStringInner via XlCall (XLOPER)"}
 };
 
 /*
@@ -377,6 +386,129 @@ __declspec(dllexport) LPXLOPER12 WINAPI cNestedThreadInfoEx(double external)
     }
 
     return result;
+}
+
+// ===== Doubles (no XLOPERs) =====
+__declspec(dllexport) double WINAPI cDoubleInner(double x, double y)
+{
+    return x + y;
+}
+
+__declspec(dllexport) double WINAPI cDoubleCaller(double x, double y)
+{
+    XLOPER12 ret;
+    int rc = Excel12f(xlUDF, &ret, 3, TempStr12(L"cDoubleInner"), TempNum12(x), TempNum12(y));
+    if (rc == xlretSuccess && (ret.xltype & xltypeNum) == xltypeNum)
+        return ret.val.num;
+    return 0.0;
+}
+
+// ===== Doubles inside XLOPERs =====
+__declspec(dllexport) LPXLOPER12 WINAPI cXDoubleInner(LPXLOPER12 x, LPXLOPER12 y)
+{
+    double xv = 0.0, yv = 0.0;
+    if (x)
+    {
+        if ((x->xltype & xltypeNum) == xltypeNum) xv = x->val.num;
+        else if ((x->xltype & xltypeInt) == xltypeInt) xv = (double)x->val.w;
+    }
+    if (y)
+    {
+        if ((y->xltype & xltypeNum) == xltypeNum) yv = y->val.num;
+        else if ((y->xltype & xltypeInt) == xltypeInt) yv = (double)y->val.w;
+    }
+    LPXLOPER12 res = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+    if (res)
+    {
+        res->xltype = xltypeNum | xlbitDLLFree;
+        res->val.num = xv + yv;
+    }
+    return res;
+}
+
+__declspec(dllexport) LPXLOPER12 WINAPI cXDoubleCaller(LPXLOPER12 x, LPXLOPER12 y)
+{
+    XLOPER12 inner;
+    int rc = Excel12f(xlUDF, &inner, 3, TempStr12(L"cXDoubleInner"), (LPXLOPER12)x, (LPXLOPER12)y);
+    LPXLOPER12 res = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+    if (!res) return NULL;
+    if (rc == xlretSuccess && (inner.xltype & xltypeNum) == xltypeNum)
+    {
+        res->xltype = xltypeNum | xlbitDLLFree;
+        res->val.num = inner.val.num;
+    }
+    else
+    {
+        res->xltype = xltypeNum | xlbitDLLFree;
+        res->val.num = 0.0;
+    }
+    return res;
+}
+
+// ===== Strings inside XLOPERs =====
+__declspec(dllexport) LPXLOPER12 WINAPI cXStringInner(LPXLOPER12 s)
+{
+    const wchar_t* prefix = L"Echo:";
+    size_t plen = wcslen(prefix);
+    const wchar_t* in = L"";
+    size_t ilen = 0;
+    if (s && (s->xltype & xltypeStr) == xltypeStr && s->val.str)
+    {
+        ilen = (size_t)s->val.str[0];
+        if (ilen > 240) ilen = 240;
+        in = &s->val.str[1];
+    }
+    LPXLOPER12 res = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+    if (!res) return NULL;
+    wchar_t* out = (wchar_t*)GlobalAlloc(GMEM_FIXED, (plen + ilen + 2) * sizeof(wchar_t));
+    if (!out)
+    {
+        GlobalFree(res);
+        return NULL;
+    }
+    out[0] = (wchar_t)(plen + ilen);
+    wcscpy_s(&out[1], plen + ilen + 1, prefix);
+    wcsncat_s(&out[1], plen + ilen + 1, in, ilen);
+    res->xltype = xltypeStr | xlbitDLLFree;
+    res->val.str = out;
+    return res;
+}
+
+__declspec(dllexport) LPXLOPER12 WINAPI cXStringCaller(LPXLOPER12 s)
+{
+    XLOPER12 inner;
+    int rc = Excel12f(xlUDF, &inner, 2, TempStr12(L"cXStringInner"), (LPXLOPER12)s);
+    LPXLOPER12 res = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+    if (!res) return NULL;
+    if (rc == xlretSuccess && (inner.xltype & xltypeStr) == xltypeStr && inner.val.str)
+    {
+        size_t ilen = (size_t)inner.val.str[0];
+        wchar_t* out = (wchar_t*)GlobalAlloc(GMEM_FIXED, (ilen + 2) * sizeof(wchar_t));
+        if (!out)
+        {
+            GlobalFree(res);
+            return NULL;
+        }
+        out[0] = (wchar_t)ilen;
+        wcsncpy_s(&out[1], ilen + 1, &inner.val.str[1], ilen);
+        res->xltype = xltypeStr | xlbitDLLFree;
+        res->val.str = out;
+        Excel12f(xlFree, 0, 1, (LPXLOPER12)&inner);
+    }
+    else
+    {
+        wchar_t* out = (wchar_t*)GlobalAlloc(GMEM_FIXED, 2 * sizeof(wchar_t));
+        if (!out)
+        {
+            GlobalFree(res);
+            return NULL;
+        }
+        out[0] = 0;
+        out[1] = 0;
+        res->xltype = xltypeStr | xlbitDLLFree;
+        res->val.str = out;
+    }
+    return res;
 }
 
 /*

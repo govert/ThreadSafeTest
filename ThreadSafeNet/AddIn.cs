@@ -6,6 +6,20 @@ namespace ThreadSafeNet
 {
     public static class AddIn
     {
+        // Doubles as parameters (no XLOPERs)
+        [ExcelFunction(Description = "Inner: add two doubles (no XLOPER)", IsThreadSafe = true)]
+        public static double csDoubleInner(double x, double y)
+        {
+            return x + y;
+        }
+
+        [ExcelFunction(Description = "Caller: calls csDoubleInner via XlCall (no XLOPER)", IsThreadSafe = true)]
+        public static double csDoubleCaller(double x, double y)
+        {
+            var res = XlCall.Excel(XlCall.xlUDF, nameof(csDoubleInner), x, y);
+            try { return Convert.ToDouble(res); } catch { return double.NaN; }
+        }
+
         [ExcelFunction(Description = "Inner thread info for cross add-in nested call test", IsThreadSafe = true)]
         public static string csInnerThreadInfo()
         {
