@@ -4,6 +4,9 @@ ThreadSafeCalc
 ThreadSafeXLOPER
 AllocatedMemoryFunction
 ThreadInfoFunction
+cInnerThreadInfo
+cNestedThreadInfo
+cNestedThreadInfoEx
 xlAutoOpen
 xlAutoClose
 xlAutoFree12

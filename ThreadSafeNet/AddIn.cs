@@ -6,6 +6,13 @@ namespace ThreadSafeNet
 {
     public static class AddIn
     {
+        [ExcelFunction(Description = "Inner thread info for cross add-in nested call test", IsThreadSafe = true)]
+        public static string csInnerThreadInfo()
+        {
+            var innerThreadId = Thread.CurrentThread.ManagedThreadId;
+            return $"InnerThread:{innerThreadId}";
+        }
+
         [ExcelFunction(Description = "C# version of ThreadSafeCFunction - calculates sqrt(input*3) + thread ID", IsThreadSafe = true)]
         public static double csThreadSafeCFunction(double input)
         {

@@ -1,5 +1,6 @@
 using ExcelDna.Integration;
 using System.IO;
+using System.Threading;
 
 namespace ThreadSafeTest
 {
@@ -70,6 +71,31 @@ namespace ThreadSafeTest
 
     public static class Functions
     {
+        [ExcelFunction(Description = "Inner thread info for nested call test", IsThreadSafe = true)]
+        public static string tsInnerThreadInfo()
+        {
+            var innerThreadId = Thread.CurrentThread.ManagedThreadId;
+            return $"InnerThread:{innerThreadId}";
+        }
+
+        [ExcelFunction(Description = "Calls an inner function via XlCall. Set callExternal=true to call into ThreadSafeNet.", IsThreadSafe = true)]
+        public static object tsNestedThreadInfo(bool callExternal = false)
+        {
+            var outerThreadId = Thread.CurrentThread.ManagedThreadId;
+            var target = callExternal ? "csInnerThreadInfo" : "tsInnerThreadInfo";
+            object innerResult;
+            try
+            {
+                innerResult = XlCall.Excel(XlCall.xlUDF, target);
+            }
+            catch (System.Exception ex)
+            {
+                innerResult = $"Error:{ex.Message}";
+            }
+
+            return $"OuterThread:{outerThreadId}; {innerResult}";
+        }
+
         [ExcelFunction(Description = "Returns a greeting message with thread info", IsThreadSafe = true)]
         public static string ThreadSafeTestFunction(string name)
         {
