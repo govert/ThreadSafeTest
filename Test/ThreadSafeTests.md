@@ -22,6 +22,12 @@ Ensure both add-ins are alongside `ThreadSafeTest.xll` in the Output folder so t
 - C caller→inner: `=cDoubleCaller(2, 3)` → `5`
 - C caller (no Temp helpers, per-thread args): `=cDoubleCallerTLS(2, 3)` → `5`
 
+### MultithreadCrash (standalone C add-in)
+- Calls by NAME (allocates and leaks name XLOPER each call):
+  - `=cDoubleCaller(2, 3)` → `5`
+- Calls by REGISTER ID:
+  - `=cDoubleCallerById(2, 3)` → `5`
+
 ## Doubles inside XLOPERs (C only)
 - C inner: `=cXDoubleInner(2, 3)` → `5`
 - C caller→inner: `=cXDoubleCaller(2, 3)` → `5`

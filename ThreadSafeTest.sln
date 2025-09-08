@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreadSafeNet", "ThreadSafe
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThreadSafeC", "ThreadSafeC\ThreadSafeC.vcxproj", "{52825D36-BA18-4F1E-9418-D20A39A25EF6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MultithreadCrash", "MultithreadCrash\MultithreadCrash.vcxproj", "{D4A3AB3C-8E6E-410A-8F02-5B2A0E2A6B9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 			Debug|x64 = Debug|x64
@@ -26,6 +28,10 @@ Global
 			{52825D36-BA18-4F1E-9418-D20A39A25EF6}.Debug|x64.Build.0 = Debug|x64
 			{52825D36-BA18-4F1E-9418-D20A39A25EF6}.Release|x64.ActiveCfg = Release|x64
 		{52825D36-BA18-4F1E-9418-D20A39A25EF6}.Release|x64.Build.0 = Release|x64
+		{D4A3AB3C-8E6E-410A-8F02-5B2A0E2A6B9E}.Debug|x64.ActiveCfg = Debug|x64
+		{D4A3AB3C-8E6E-410A-8F02-5B2A0E2A6B9E}.Debug|x64.Build.0 = Debug|x64
+		{D4A3AB3C-8E6E-410A-8F02-5B2A0E2A6B9E}.Release|x64.ActiveCfg = Release|x64
+		{D4A3AB3C-8E6E-410A-8F02-5B2A0E2A6B9E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

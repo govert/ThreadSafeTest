@@ -12,12 +12,11 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{52825D36-BA18-4F1E-9418-D20A39A25EF6}</ProjectGuid>
-    <RootNamespace>ThreadSafeC</RootNamespace>
+    <ProjectGuid>{D4A3AB3C-8E6E-410A-8F02-5B2A0E2A6B9E}</ProjectGuid>
+    <RootNamespace>MultithreadCrash</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -32,11 +31,6 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
-  
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -51,7 +45,7 @@
     <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LocalDebuggerCommand>$(PROGRAMFILES)\Microsoft Office\root\Office16\EXCEL.EXE</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(SolutionDir)Output\$(Configuration)</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerCommandArguments>/x "ThreadSafeC.xll"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>/x "MultithreadCrash.xll"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -61,14 +55,14 @@
     <IntDir>$(ProjectDir)obj\$(ProjectName)\$(Configuration)\$(Platform)\</IntDir>
     <LocalDebuggerCommand>$(PROGRAMFILES)\Microsoft Office\root\Office16\EXCEL.EXE</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>$(SolutionDir)Output\$(Configuration)</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerCommandArguments>/x "ThreadSafeC.xll"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>/x "MultithreadCrash.xll"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;THREADSAFEC_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;MULTITHREADCRASH_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -90,7 +84,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;THREADSAFEC_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;MULTITHREADCRASH_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -108,14 +102,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ThreadSafeC.c" />
+    <ClCompile Include="MultithreadCrash.c" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ThreadSafeC.def" />
+    <None Include="MultithreadCrash.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
   <Target Name="PostBuild" AfterTargets="Build">
     <PropertyGroup>
       <OutputDir Condition="'$(SolutionDir)' != ''">$(SolutionDir)Output\$(Configuration)</OutputDir>
