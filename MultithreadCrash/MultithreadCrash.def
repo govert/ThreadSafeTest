@@ -1,7 +1,0 @@
-LIBRARY MultithreadCrash
-EXPORTS
-    xlAutoOpen
-    xlAutoClose
-    cDoubleInner
-    cDoubleCaller
-    cDoubleCallerById

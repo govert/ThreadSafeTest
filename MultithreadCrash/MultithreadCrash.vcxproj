@@ -104,9 +104,6 @@
   <ItemGroup>
     <ClCompile Include="MultithreadCrash.c" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="MultithreadCrash.def" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="PostBuild" AfterTargets="Build">
     <PropertyGroup>
