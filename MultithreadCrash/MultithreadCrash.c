@@ -18,11 +18,13 @@ static void DebugPrintW(const wchar_t* fmt, ...)
 }
 
 // Functions (thread-safe)
-#define rgFuncsRows 3
+#define rgFuncsRows 5
 static const LPWSTR rgFuncs[rgFuncsRows][7] = {
     {(LPWSTR)L"cDoubleInner",  (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleInner",  (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Inner add: returns x+y"},
     {(LPWSTR)L"cDoubleCaller", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCaller", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by name (leaks name XLOPER)"},
-    {(LPWSTR)L"cDoubleCallerById", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerById", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by register id"}
+    {(LPWSTR)L"cDoubleCallerById", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerById", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by register id"},
+    {(LPWSTR)L"cDoubleCallerDirect", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerDirect", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by name, w/out framework"},
+    {(LPWSTR)L"cDoubleCallerDirectById", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerDirectById", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by register id, w/out framework"}
 };
 
 // Register id captured for cDoubleInner
@@ -31,6 +33,8 @@ static XLOPER12 g_reg_cDoubleInner = { 0 };
 // cDoubleInner: returns x+y
 __declspec(dllexport) double WINAPI cDoubleInner(double x, double y)
 {
+	// Sleep this thread for 100 ms to simulate some work using the Windows API
+	Sleep(100);
     return x + y;
 }
 
@@ -76,6 +80,58 @@ __declspec(dllexport) double WINAPI cDoubleCaller(double x, double y)
     return 0.0;
 }
 
+__declspec(dllexport) double WINAPI cDoubleCallerDirect(double x, double y)
+{
+    // Allocate an array of XLOPER12s on the heap
+    LPXLOPER12 args = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, 3 * sizeof(XLOPER12));
+    if (!args)
+        return 0.0; // Allocation failed
+
+    // Initialize the first argument: function name
+    args[0].xltype = xltypeStr;
+    args[0].val.str = (XCHAR*)GlobalAlloc(GMEM_FIXED, 14 * sizeof(XCHAR)); // "cDoubleInner" + length prefix
+    if (!args[0].val.str)
+    {
+        GlobalFree(args);
+        return 0.0; // Allocation failed
+    }
+    args[0].val.str[0] = 12; // Length prefix
+    wcscpy_s(&args[0].val.str[1], 13, L"cDoubleInner");
+
+    // Initialize the second argument: x
+    args[1].xltype = xltypeNum;
+    args[1].val.num = x;
+
+    // Initialize the third argument: y
+    args[2].xltype = xltypeNum;
+    args[2].val.num = y;
+
+    // Prepare the result XLOPER12
+    XLOPER12 result;
+    ZeroMemory(&result, sizeof(XLOPER12));
+
+    // Call Excel12 directly
+    int rc = Excel12(xlUDF, &result, 3, &args[0], &args[1], &args[2]);
+
+    // // Free allocated memory for arguments
+    // GlobalFree(args[0].val.str);
+    // GlobalFree(args);
+
+    // Check the result and return the value if successful
+    if (rc == xlretSuccess && (result.xltype & xltypeNum) == xltypeNum)
+    {
+        double returnValue = result.val.num;
+
+        // Free the result if necessary
+        if (result.xltype & xlbitXLFree)
+            Excel12(xlFree, 0, 1, &result);
+
+        return returnValue;
+    }
+
+    return 0.0; // Default return value on failure
+}
+
 // cDoubleCallerById: calls by REGISTER ID (g_reg_cDoubleInner) and TLS numeric args. No Temp helpers.
 __declspec(dllexport) double WINAPI cDoubleCallerById(double x, double y)
 {
@@ -103,6 +159,47 @@ __declspec(dllexport) double WINAPI cDoubleCallerById(double x, double y)
     if (rc == xlretSuccess && (ret.xltype & xltypeNum) == xltypeNum)
         return ret.val.num;
     return 0.0;
+}
+
+// cDoubleCallerDirectById: calls cDoubleInner using its registration ID directly
+__declspec(dllexport) double WINAPI cDoubleCallerDirectById(double x, double y)
+{
+    // Allocate an array of XLOPER12s on the heap
+    LPXLOPER12 args = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, 2 * sizeof(XLOPER12));
+    if (!args)
+        return 0.0; // Allocation failed
+
+    // Initialize the first argument: x
+    args[0].xltype = xltypeNum;
+    args[0].val.num = x;
+
+    // Initialize the second argument: y
+    args[1].xltype = xltypeNum;
+    args[1].val.num = y;
+
+    // Prepare the result XLOPER12
+    XLOPER12 result;
+    ZeroMemory(&result, sizeof(XLOPER12));
+
+    // Call Excel12 directly using the registration ID
+    int rc = Excel12(xlUDF, &result, 3, (LPXLOPER12)&g_reg_cDoubleInner, &args[0], &args[1]);
+
+    // Free allocated memory for arguments
+    GlobalFree(args);
+
+    // Check the result and return the value if successful
+    if (rc == xlretSuccess && (result.xltype & xltypeNum) == xltypeNum)
+    {
+        double returnValue = result.val.num;
+
+        // Free the result if necessary
+        if (result.xltype & xlbitXLFree)
+            Excel12(xlFree, 0, 1, &result);
+
+        return returnValue;
+    }
+
+    return 0.0; // Default return value on failure
 }
 
 // Registration
