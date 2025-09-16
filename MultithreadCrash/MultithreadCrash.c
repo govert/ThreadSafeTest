@@ -18,13 +18,16 @@ static void DebugPrintW(const wchar_t* fmt, ...)
 }
 
 // Functions (thread-safe)
-#define rgFuncsRows 10
+#define rgFuncsRows 12
 static const LPWSTR rgFuncs[rgFuncsRows][7] = {
     {(LPWSTR)L"cDoubleInner",  (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleInner",  (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Inner add: returns x+y"},
     {(LPWSTR)L"cDoubleCaller", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCaller", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by name (leaks name XLOPER)"},
     {(LPWSTR)L"cDoubleCallerById", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerById", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by register id"},
     {(LPWSTR)L"cDoubleCallerDirect", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerDirect", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by name, w/out framework"},
     {(LPWSTR)L"cDoubleCallerDirectById", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerDirectById", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by register id, w/out framework"},
+    // Excel12Direct test functions: direct MdCallBack12 calls
+    {(LPWSTR)L"cDoubleCallerExcel12Direct", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerExcel12Direct", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Direct MdCallBack12: calls by name"},
+    {(LPWSTR)L"cDoubleCallerExcel12DirectById", (LPWSTR)L"BBB$", (LPWSTR)L"cDoubleCallerExcel12DirectById", (LPWSTR)L"x,y", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Direct MdCallBack12: calls by register id"},
     // XLOPER12 string functions: return Q, take two Q args; thread-safe ($)
     {(LPWSTR)L"cStringsInner", (LPWSTR)L"QQQ$", (LPWSTR)L"cStringsInner", (LPWSTR)L"str1,str2", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Inner concat: returns str1+str2"},
     {(LPWSTR)L"cStringsCaller", (LPWSTR)L"QQQ$", (LPWSTR)L"cStringsCaller", (LPWSTR)L"str1,str2", (LPWSTR)L"1", (LPWSTR)L"Multithread Crash", (LPWSTR)L"Caller: calls by name, w/out framework"},
@@ -38,6 +41,77 @@ static const LPWSTR rgFuncs[rgFuncsRows][7] = {
 static XLOPER12 g_reg_cDoubleInner = { 0 };
 static XLOPER12 g_reg_cStringsInner = { 0 };
 static XLOPER12 g_reg_cStringsFreeInner = { 0 };
+
+// Direct MdCallBack12 function pointer and initialization
+typedef int (__stdcall *MDCALLBACK12_PROC)(int xlfn, int count, LPXLOPER12 *opers, LPXLOPER12 operRes);
+static MDCALLBACK12_PROC g_pMdCallBack12 = NULL;
+static HMODULE g_hmoduleExcel = NULL;
+
+// Initialize direct MdCallBack12 access
+static int InitMdCallBack12(void)
+{
+    if (g_pMdCallBack12)
+        return 1; // Already initialized
+
+    // Get handle to current process (Excel.exe)
+    g_hmoduleExcel = GetModuleHandleA(NULL);
+    if (!g_hmoduleExcel)
+    {
+        DebugPrintW(L"[MultithreadCrash] Failed to get Excel module handle\n");
+        return 0;
+    }
+
+    // Get the MdCallBack12 function pointer
+    g_pMdCallBack12 = (MDCALLBACK12_PROC)GetProcAddress(g_hmoduleExcel, "MdCallBack12");
+    if (!g_pMdCallBack12)
+    {
+        DebugPrintW(L"[MultithreadCrash] Failed to get MdCallBack12 proc address\n");
+        return 0;
+    }
+
+    DebugPrintW(L"[MultithreadCrash] Successfully initialized MdCallBack12 at %p\n", g_pMdCallBack12);
+    return 1;
+}
+
+// Excel12Direct: Direct call to MdCallBack12 bypassing framework
+static int _cdecl Excel12Direct(int xlfn, LPXLOPER12 operRes, int count, ...)
+{
+    // Initialize MdCallBack12 if needed
+    if (!InitMdCallBack12())
+        return xlretFailed;
+
+    // Validate parameters
+    if (count < 0 || count > 255)
+        return xlretInvCount;
+
+    // Allocate array for XLOPER12 pointers
+    LPXLOPER12 opers[256]; // Max 255 args + safety margin
+    
+    if (count > 0)
+    {
+        va_list args;
+        va_start(args, count);
+        
+        // Extract variadic arguments into array
+        for (int i = 0; i < count; i++)
+        {
+            opers[i] = va_arg(args, LPXLOPER12);
+        }
+        
+        va_end(args);
+    }
+
+    DWORD tid = GetCurrentThreadId();
+    DebugPrintW(L"[MultithreadCrash] Thread %lu: Excel12Direct calling MdCallBack12(xlfn=%d, count=%d)\n", 
+                tid, xlfn, count);
+
+    // Call MdCallBack12 directly with the signature we determined:
+    // int MdCallBack12(int xlfn, int count, LPXLOPER12 *opers, LPXLOPER12 operRes)
+    int result = g_pMdCallBack12(xlfn, count, opers, operRes);
+
+    DebugPrintW(L"[MultithreadCrash] Thread %lu: Excel12Direct returned %d\n", tid, result);
+    return result;
+}
 
 // cDoubleInner: returns x+y
 __declspec(dllexport) double WINAPI cDoubleInner(double x, double y)
@@ -594,7 +668,7 @@ __declspec(dllexport) LPXLOPER12 WINAPI cStringsFreeDirectById(LPXLOPER12 str1, 
     ZeroMemory(&result, sizeof(XLOPER12));
 
     // Call Excel12 using the registration ID of cStringsFreeInner
-    int rc = Excel12(xlUDF, &result, 3, (LPXLOPER12)&g_reg_cStringsFreeInner, &args[0], &args[1]);
+    int rc = Excel12Direct(xlUDF, &result, 3, (LPXLOPER12)&g_reg_cStringsFreeInner, &args[0], &args[1]);
 
     // Free argument strings and array now that the call is done
     FREE_ARG_STR(0);
@@ -644,11 +718,108 @@ __declspec(dllexport) LPXLOPER12 WINAPI cStringsFreeDirectById(LPXLOPER12 str1, 
     return emptyRet;
 }
 
+// Test functions using Excel12Direct (bypassing framework)
+
+// cDoubleCallerExcel12Direct: calls cDoubleInner by name using Excel12Direct
+__declspec(dllexport) double WINAPI cDoubleCallerExcel12Direct(double x, double y)
+{
+    static __declspec(thread) int tls_init = 0;
+    static __declspec(thread) LPXLOPER12 tls_x = NULL;
+    static __declspec(thread) LPXLOPER12 tls_y = NULL;
+
+    DWORD tid = GetCurrentThreadId();
+    DebugPrintW(L"[MultithreadCrash] Thread %lu: cDoubleCallerExcel12Direct called\n", tid);
+
+    if (!tls_init)
+    {
+        DebugPrintW(L"[MultithreadCrash] Thread %lu: init TLS numeric args\n", tid);
+        tls_x = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+        tls_y = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+        if (tls_x) { tls_x->xltype = xltypeNum; tls_x->val.num = 0.0; }
+        if (tls_y) { tls_y->xltype = xltypeNum; tls_y->val.num = 0.0; }
+        tls_init = 1;
+    }
+
+    if (tls_x) tls_x->val.num = x;
+    if (tls_y) tls_y->val.num = y;
+
+    // Allocate a fresh function name XLOPER12 on the heap
+    LPXLOPER12 fnArg = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+    LPWSTR fnStr = (LPWSTR)GlobalAlloc(GMEM_FIXED, 32 * sizeof(wchar_t));
+    if (fnArg && fnStr)
+    {
+        const wchar_t* name = L"cDoubleInner";
+        size_t nlen = wcslen(name); if (nlen > 30) nlen = 30;
+        fnStr[0] = (wchar_t)nlen;
+        wcsncpy_s(&fnStr[1], 31, name, nlen);
+        fnArg->xltype = xltypeStr;
+        fnArg->val.str = fnStr;
+    }
+
+    XLOPER12 ret;
+    int rc = Excel12Direct(xlUDF, &ret, 3, fnArg, tls_x, tls_y);
+    
+    DebugPrintW(L"[MultithreadCrash] Thread %lu: Excel12Direct returned %d\n", tid, rc);
+    
+    if (rc == xlretSuccess && (ret.xltype & xltypeNum) == xltypeNum)
+        return ret.val.num;
+    return 0.0;
+}
+
+// cDoubleCallerExcel12DirectById: calls cDoubleInner by ID using Excel12Direct
+__declspec(dllexport) double WINAPI cDoubleCallerExcel12DirectById(double x, double y)
+{
+    static __declspec(thread) int tls_init = 0;
+    static __declspec(thread) LPXLOPER12 tls_x = NULL;
+    static __declspec(thread) LPXLOPER12 tls_y = NULL;
+
+    DWORD tid = GetCurrentThreadId();
+    DebugPrintW(L"[MultithreadCrash] Thread %lu: cDoubleCallerExcel12DirectById called\n", tid);
+
+    if (!tls_init)
+    {
+        DebugPrintW(L"[MultithreadCrash] Thread %lu: init TLS numeric args\n", tid);
+        tls_x = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+        tls_y = (LPXLOPER12)GlobalAlloc(GMEM_FIXED, sizeof(XLOPER12));
+        if (tls_x) { tls_x->xltype = xltypeNum; tls_x->val.num = 0.0; }
+        if (tls_y) { tls_y->xltype = xltypeNum; tls_y->val.num = 0.0; }
+        tls_init = 1;
+    }
+
+    if (tls_x) tls_x->val.num = x;
+    if (tls_y) tls_y->val.num = y;
+
+    if ((g_reg_cDoubleInner.xltype & xltypeNum) != xltypeNum)
+    {
+        DebugPrintW(L"[MultithreadCrash] Thread %lu: Registration ID not available\n", tid);
+        return 0.0; // ID not available
+    }
+
+    XLOPER12 ret;
+    int rc = Excel12Direct(xlUDF, &ret, 3, (LPXLOPER12)&g_reg_cDoubleInner, tls_x, tls_y);
+    
+    DebugPrintW(L"[MultithreadCrash] Thread %lu: Excel12Direct returned %d\n", tid, rc);
+    
+    if (rc == xlretSuccess && (ret.xltype & xltypeNum) == xltypeNum)
+        return ret.val.num;
+    return 0.0;
+}
+
 // Registration
 __declspec(dllexport) int WINAPI xlAutoOpen(void)
 {
     static XLOPER12 xDLL;
     Excel12f(xlGetName, &xDLL, 0);
+
+    // Initialize direct MdCallBack12 access
+    if (InitMdCallBack12())
+    {
+        DebugPrintW(L"[MultithreadCrash] MdCallBack12 initialized successfully in xlAutoOpen\n");
+    }
+    else
+    {
+        DebugPrintW(L"[MultithreadCrash] WARNING: Failed to initialize MdCallBack12 in xlAutoOpen\n");
+    }
 
     for (int i = 0; i < rgFuncsRows; i++)
     {

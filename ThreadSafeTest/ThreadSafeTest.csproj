@@ -13,6 +13,7 @@
     <!-- Explicit 64bit output file name -->
     <!-- Default value: empty -->
     <ExcelDnaPack64BitXllName>ThreadSafeTest</ExcelDnaPack64BitXllName>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

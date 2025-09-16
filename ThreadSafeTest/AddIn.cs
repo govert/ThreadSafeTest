@@ -1,24 +1,28 @@
-using ExcelDna.Integration;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using ExcelDna.Integration;
 
 namespace ThreadSafeTest
 {
     public class AddIn : IExcelAddIn
     {
+        public static ConcurrentDictionary<string, object> RegisterIds = new ConcurrentDictionary<string, object>();
+
         public void AutoOpen()
         {
             // Get the directory where this add-in is located
             string addInPath = ExcelDnaUtil.XllPath;
             string addInDirectory = Path.GetDirectoryName(addInPath);
-            
+
             // List of add-ins to load
-            string[] addInsToLoad = { "ThreadSafeC.xll", "ThreadSafeNet.xll" };
-            
+            string[] addInsToLoad = { "ThreadSafeC.xll", "ThreadSafeNet.xll", "MultithreadCrash.xll" };
+
             foreach (string addInFileName in addInsToLoad)
             {
                 string fullPath = Path.Combine(addInDirectory, addInFileName);
-                
+
                 if (File.Exists(fullPath))
                 {
                     try
@@ -37,6 +41,19 @@ namespace ThreadSafeTest
                     System.Diagnostics.Debug.WriteLine($"Add-in not found: {fullPath}");
                 }
             }
+
+
+            // Get the registerId for some functions we want to call
+            string[] functions =  { "csThreadSafeCFunction", "ThreadSafeCFunction", "csThreadSafeCalc", "ThreadSafeCalc",                                    
+                                    "csThreadSafeXLOPER", "ThreadSafeXLOPER",
+                                    "csAllocatedMemoryFunction", "AllocatedMemoryFunction",
+                                    "csThreadInfoFunction", "ThreadInfoFunction",
+                                    "csInnerThreadInfo", "tsInnerThreadInfo" };
+            foreach (var function in functions)
+            {
+                var registerId = (int)(double)XlCall.Excel(XlCall.xlfEvaluate, function);
+                RegisterIds[function] = registerId;
+            }
         }
 
         public void AutoClose()
@@ -45,13 +62,13 @@ namespace ThreadSafeTest
             // Get the directory where this add-in is located
             string addInPath = ExcelDnaUtil.XllPath;
             string addInDirectory = Path.GetDirectoryName(addInPath);
-            
+
             string[] addInsToUnload = { "ThreadSafeC.xll", "ThreadSafeNet.xll" };
-            
+
             foreach (string addInFileName in addInsToUnload)
             {
                 string fullPath = Path.Combine(addInDirectory, addInFileName);
-                
+
                 if (File.Exists(fullPath))
                 {
                     try
@@ -86,7 +103,7 @@ namespace ThreadSafeTest
             object innerResult;
             try
             {
-                innerResult = XlCall.Excel(XlCall.xlUDF, target);
+                innerResult = XlCall.Excel(XlCall.xlUDF, GetRegisterId(target));
             }
             catch (System.Exception ex)
             {
@@ -110,11 +127,11 @@ namespace ThreadSafeTest
             {
                 if (useCSharp)
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "csThreadSafeCFunction", input);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadSafeCFunction"), input);
                 }
                 else
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "ThreadSafeCFunction", input);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadSafeCFunction"), input);
                 }
             }
             catch (System.Exception ex)
@@ -130,11 +147,11 @@ namespace ThreadSafeTest
             {
                 if (useCSharp)
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "csThreadSafeCalc", number);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadSafeCalc"), number);
                 }
                 else
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "ThreadSafeCalc", number);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadSafeCalc"), number);
                 }
             }
             catch (System.Exception ex)
@@ -150,11 +167,11 @@ namespace ThreadSafeTest
             {
                 if (useCSharp)
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "csThreadSafeXLOPER", input);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadSafeXLOPER"), input);
                 }
                 else
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "ThreadSafeXLOPER", input);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadSafeXLOPER"), input);
                 }
             }
             catch (System.Exception ex)
@@ -170,11 +187,11 @@ namespace ThreadSafeTest
             {
                 if (useCSharp)
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "csAllocatedMemoryFunction", size);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("csAllocatedMemoryFunction"), size);
                 }
                 else
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "AllocatedMemoryFunction", size);
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("AllocatedMemoryFunction"), size);
                 }
             }
             catch (System.Exception ex)
@@ -190,11 +207,11 @@ namespace ThreadSafeTest
             {
                 if (useCSharp)
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "csThreadInfoFunction");
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadInfoFunction"));
                 }
                 else
                 {
-                    return XlCall.Excel(XlCall.xlUDF, "ThreadInfoFunction");
+                    return XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadInfoFunction"));
                 }
             }
             catch (System.Exception ex)
@@ -210,20 +227,20 @@ namespace ThreadSafeTest
             {
                 var managedThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
                 object result1, result2, threadInfo;
-                
+
                 if (useCSharp)
                 {
-                    result1 = XlCall.Excel(XlCall.xlUDF, "csThreadSafeCalc", input);
-                    result2 = XlCall.Excel(XlCall.xlUDF, "csThreadSafeXLOPER", input);
-                    threadInfo = XlCall.Excel(XlCall.xlUDF, "csThreadInfoFunction");
+                    result1 = XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadSafeCalc"), input);
+                    result2 = XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadSafeXLOPER"), input);
+                    threadInfo = XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadInfoFunction"));
                 }
                 else
                 {
-                    result1 = XlCall.Excel(XlCall.xlUDF, "ThreadSafeCalc", input);
-                    result2 = XlCall.Excel(XlCall.xlUDF, "ThreadSafeXLOPER", input);
-                    threadInfo = XlCall.Excel(XlCall.xlUDF, "ThreadInfoFunction");
+                    result1 = XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadSafeCalc"), input);
+                    result2 = XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadSafeXLOPER"), input);
+                    threadInfo = XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadInfoFunction"));
                 }
-                
+
                 return $"Managed Thread: {managedThreadId}, Calc: {result1}, XLOPER: {result2}, Info: {threadInfo}";
             }
             catch (System.Exception ex)
@@ -239,20 +256,20 @@ namespace ThreadSafeTest
             {
                 if (iterations <= 0) iterations = 1;
                 if (iterations > 1000) iterations = 1000; // Limit to prevent Excel freezing
-                
+
                 var startTime = System.DateTime.Now;
                 object lastResult = 0.0;
                 string functionName = useCSharp ? "csThreadSafeCalc" : "ThreadSafeCalc";
-                
+
                 for (int i = 0; i < iterations; i++)
                 {
-                    lastResult = XlCall.Excel(XlCall.xlUDF, functionName, input + i);
+                    lastResult = XlCall.Excel(XlCall.xlUDF, GetRegisterId(functionName), input + i);
                 }
-                
+
                 var endTime = System.DateTime.Now;
                 var elapsed = endTime - startTime;
                 string version = useCSharp ? "C#" : "C";
-                
+
                 return $"{version} - Iterations: {iterations}, Last Result: {lastResult}, Time: {elapsed.TotalMilliseconds:F2}ms";
             }
             catch (System.Exception ex)
@@ -268,27 +285,27 @@ namespace ThreadSafeTest
             {
                 if (iterations <= 0) iterations = 1;
                 if (iterations > 500) iterations = 500; // Lower limit for comparison
-                
+
                 // Test C version
                 var startTimeC = System.DateTime.Now;
                 object lastResultC = 0.0;
                 for (int i = 0; i < iterations; i++)
                 {
-                    lastResultC = XlCall.Excel(XlCall.xlUDF, "ThreadSafeCalc", input + i);
+                    lastResultC = XlCall.Excel(XlCall.xlUDF, GetRegisterId("ThreadSafeCalc"), input + i);
                 }
                 var endTimeC = System.DateTime.Now;
                 var elapsedC = endTimeC - startTimeC;
-                
+
                 // Test C# version
                 var startTimeCS = System.DateTime.Now;
                 object lastResultCS = 0.0;
                 for (int i = 0; i < iterations; i++)
                 {
-                    lastResultCS = XlCall.Excel(XlCall.xlUDF, "csThreadSafeCalc", input + i);
+                    lastResultCS = XlCall.Excel(XlCall.xlUDF, GetRegisterId("csThreadSafeCalc"), input + i);
                 }
                 var endTimeCS = System.DateTime.Now;
                 var elapsedCS = endTimeCS - startTimeCS;
-                
+
                 return $"C: {elapsedC.TotalMilliseconds:F2}ms ({lastResultC}), C#: {elapsedCS.TotalMilliseconds:F2}ms ({lastResultCS})";
             }
             catch (System.Exception ex)
@@ -296,5 +313,23 @@ namespace ThreadSafeTest
                 return $"Error in comparison: {ex.Message}";
             }
         }
+
+        static object GetRegisterId(string functionName)
+        {
+            if (AddIn.RegisterIds.TryGetValue(functionName, out var registerId))
+            {
+                return registerId;
+            }
+
+            Debug.Print($"[{Thread.CurrentThread.ManagedThreadId}] RegisterId for {functionName} not found.");
+            throw new System.Exception($"RegisterId for {functionName} not found. Ensure the add-in is loaded and the function name is correct.");
+            //Debug.Print($"[{Thread.CurrentThread.ManagedThreadId}] RegisterId for {functionName} not found, attempting to retrieve.");
+            //var regId = (double)XlCall.Excel(XlCall.xlfEvaluate, functionName);
+            //Debug.Print($"[{Thread.CurrentThread.ManagedThreadId}] Retrieved RegisterId for {functionName}: {regId}");
+            //AddIn.RegisterIds[functionName] = regId;
+            //return regId;
+        }
+
     }
 }
+

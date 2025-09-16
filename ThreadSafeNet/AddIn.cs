@@ -4,8 +4,10 @@ using System.Threading;
 
 namespace ThreadSafeNet
 {
-    public static class AddIn
+    public class AddIn : IExcelAddIn
     {
+        static Dictionary<string, double> _registerIds = new Dictionary<string, double>();
+
         // Doubles as parameters (no XLOPERs)
         [ExcelFunction(Description = "Inner: add two doubles (no XLOPER)", IsThreadSafe = true)]
         public static double csDoubleInner(double x, double y)
@@ -16,7 +18,7 @@ namespace ThreadSafeNet
         [ExcelFunction(Description = "Caller: calls csDoubleInner via XlCall (no XLOPER)", IsThreadSafe = true)]
         public static double csDoubleCaller(double x, double y)
         {
-            var res = XlCall.Excel(XlCall.xlUDF, nameof(csDoubleInner), x, y);
+            var res = XlCall.Excel(XlCall.xlUDF, _registerIds[nameof(csDoubleInner)], x, y);
             try { return Convert.ToDouble(res); } catch { return double.NaN; }
         }
 
@@ -96,6 +98,17 @@ namespace ThreadSafeNet
             }
 
             return $"C# Advanced: Thread {threadId}, Sum: {sum:F2}, Iterations: {iterations}";
+        }
+
+        public void AutoOpen()
+        {
+            var funcName = nameof(csDoubleInner);
+            var regId = (double)XlCall.Excel(XlCall.xlfEvaluate, funcName);
+            _registerIds[funcName] = regId;
+        }
+
+        public void AutoClose()
+        {
         }
     }
 }
